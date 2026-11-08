@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trạm Giám Sát & Điều Khiển Độ pH</title>
+    <!-- Sử dụng Tailwind CSS CDN để thiết kế giao diện nhanh chóng, đẹp mắt -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Thư viện vẽ biểu đồ Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Thư viện FontAwesome để hiển thị các icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 pb-12">
+
+    <!-- Header / Tiêu đề trang -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-water text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider">Nhóm 3</span>
+                    <h1 class="text-lg font-bold text-slate-900 leading-tight">TRẠM GIÁM SÁT & ĐIỀU KHIỂN ĐỘ PH</h1>
+                </div>
+            </div>
+            
+            <!-- Công tắc chuyển đổi chế độ Giả lập / Thực tế -->
+            <div class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                <span class="text-xs font-medium text-slate-600">Chế độ giả lập (Demo):</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="simToggle" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-4 mt-6 space-y-6">
+
+        <!-- 3 Thẻ hiển thị thông số chính (Cards) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Thẻ 1: pH Hiện Tại -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Độ pH Hiện Tại</span>
+                    <h2 id="phValueDisplay" class="text-3xl font-extrabold text-blue-600">7.00</h2>
+                </div>
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-droplet"></i>
+                </div>
+            </div>
+
+            <!-- Thẻ 2: Điện áp Vout -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Điện Áp Vout</span>
+                    <h2 id="voltageDisplay" class="text-3xl font-extrabold text-slate-700">2.500 <span class="text-lg font-medium text-slate-400">V</span></h2>
+                </div>
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+            </div>
+
+            <!-- Thẻ 3: Trạng thái Bơm -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Trạng Thái Bơm</span>
+                    <div id="pumpStatusBadge" class="inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded-full font-bold text-sm mt-1">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
+                        Đang Tắt
+                    </div>
+                    <span id="pumpModeLabel" class="text-[11px] text-slate-400 block mt-1">Chế độ Tự động</span>
+                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-pump-soap"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Khung Biểu Đồ Thời Gian Thực -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-blue-600"></i> Đồ Thị Độ pH (Thời gian thực)
+                </h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="exportCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Excel
+                    </button>
+                </div>
+            </div>
+            <div class="h-72 w-full">
+                <canvas id="phChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Khung Điều khiển & Cài đặt (Grid 2 cột) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Cột 1: Cài đặt Ngưỡng Bơm Tự Động -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-blue-600"></i> Cài Đặt Ngưỡng Bơm Tự Động
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="text-xs font-medium text-slate-600 block mb-1">Bật bơm khi pH &lt;=</label>
+                            <input type="number" id="lowThreshold" step="0.1" value="5.5" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-slate-600 block mb-1">Tắt bơm khi pH &gt;=</label>
+                            <input type="number" id="highThreshold" step="0.1" value="8.5" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-semibold">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="saveThresholds()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 rounded-xl transition shadow-sm">
+                        Lưu Ngưỡng Cài Đặt
+                    </button>
+                    <button id="pumpToggleBtn" onclick="togglePumpManual()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold py-2.5 rounded-xl transition">
+                        Chế độ: Tự Động
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cột 2: Hiệu Chuẩn Sai Số (Calibration) -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-blue-600"></i> Hiệu Chuẩn Sai Số Cảm Biến
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="text-xs font-medium text-slate-600 block mb-1">Điện áp chuẩn pH 7 (V)</label>
+                            <input type="number" id="calVoltage7" step="0.01" value="2.50" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-slate-600 block mb-1">Độ nhạy Slope (V/pH)</label>
+                            <input type="number" id="calSlope" step="0.01" value="0.18" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-semibold">
+                        </div>
+                    </div>
+                </div>
+                <button onclick="saveCalibration()" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 rounded-xl transition shadow-sm mt-4">
+                    Áp Dụng Thông Số Hiệu Chuẩn
+                </button>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- JavaScript Xử lý giao diện & Giả lập dữ liệu -->
+    <script>
+        // --- 1. Cấu hình Biểu đồ Chart.js ---
+        const ctx = document.getElementById('phChart').getContext('2d');
+        const maxDataPoints = 20;
+        
+        const phChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Độ pH nước thải',
+                    data: [],
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#2563eb'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 14,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { font: { size: 11 } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10 } }
+                    }
+                }
+            }
+        });
+
+        // --- 2. Biến trạng thái hệ thống ---
+        let historyDataStore = []; // Lưu trữ dữ liệu để xuất Excel
+        let isManualPump = false;
+        let pumpState = false;
+        let lowThresh = 5.5;
+        let highThresh = 8.5;
+        let zeroVoltage = 2.50;
+        let slope = 0.18;
+
+        // --- 3. Vòng lặp cập nhật dữ liệu (Giả lập hoặc Thực tế) ---
+        let simTime = 0;
+        setInterval(() => {
+            const isSim = document.getElementById('simToggle').checked;
+            let currentPH = 7.0;
+            let currentVolt = 2.5;
+
+            if (isSim) {
+                // Tạo dao động pH giả lập hình sin nhẹ nhàng quanh mức trung tính
+                simTime += 0.2;
+                currentPH = 7.0 + 2.2 * Math.sin(simTime) + (Math.random() * 0.3 - 0.15);
+                currentPH = Math.max(0, Math.min(14, currentPH)); // Giới hạn 0 - 14
+                currentVolt = zeroVoltage - (currentPH - 7.0) * slope;
+            } else {
+                // (Phần này sau này bạn thay bằng dữ liệu fetch từ ESP32/API thực tế)
+                currentPH = 7.0;
+                currentVolt = 2.5;
+            }
+
+            // Cập nhật giao diện số liệu
+            document.getElementById('phValueDisplay').innerText = currentPH.toFixed(2);
+            document.getElementById('voltageDisplay').innerHTML = currentVolt.toFixed(3) + ' <span class="text-lg font-medium text-slate-400">V</span>';
+
+            // Logic điều khiển Bơm tự động / Thủ công
+            if (!isManualPump) {
+                if (currentPH <= lowThresh || currentPH >= highThresh) {
+                    pumpState = true;
+                } else {
+                    pumpState = false;
+                }
+            }
+
+            // Cập nhật hiển thị trạng thái bơm
+            const badge = document.getElementById('pumpStatusBadge');
+            if (pumpState) {
+                badge.className = "inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-bold text-sm mt-1";
+                badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span> Đang Bật (Định lượng)';
+            } else {
+                badge.className = "inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded-full font-bold text-sm mt-1";
+                badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span> Đang Tắt';
+            }
+
+            // Đẩy dữ liệu vào biểu đồ
+            const nowStr = new Date().toLocaleTimeString();
+            if (phChart.data.labels.length >= maxDataPoints) {
+                phChart.data.labels.shift();
+                phChart.data.datasets[0].data.shift();
+            }
+            phChart.data.labels.push(nowStr);
+            phChart.data.datasets[0].data.push(currentPH.toFixed(2));
+            phChart.data.datasets[0].pointBackgroundColor = currentPH < 6 ? '#dc2626' : (currentPH > 8 ? '#9333ea' : '#2563eb');
+            phChart.update();
+
+            // Lưu lịch sử để xuất Excel
+            historyDataStore.push({
+                time: new Date().toLocaleString(),
+                ph: currentPH.toFixed(2),
+                voltage: currentVolt.toFixed(3),
+                pump: pumpState ? "Bật" : "Tắt"
+            });
+
+        }, 2000); // Cập nhật mỗi 2 giây
+
+        // --- 4. Các hàm xử lý tương tác nút bấm ---
+        function saveThresholds() {
+            lowThresh = parseFloat(document.getElementById('lowThreshold').value);
+            highThresh = parseFloat(document.getElementById('highThreshold').value);
+            alert("Đã cập nhật ngưỡng bơm thành công!");
+        }
+
+        function saveCalibration() {
+            zeroVoltage = parseFloat(document.getElementById('calVoltage7').value);
+            slope = parseFloat(document.getElementById('calSlope').value);
+            alert("Đã lưu thông số hiệu chuẩn cảm biến!");
+        }
+
+        function togglePumpManual() {
+            isManualPump = !isManualPump;
+            const btn = document.getElementById('pumpToggleBtn');
+            const modeLabel = document.getElementById('pumpModeLabel');
+            if (isManualPump) {
+                btn.className = "flex-1 bg-blue-600 text-white text-xs font-semibold py-2.5 rounded-xl transition shadow-sm";
+                btn.innerText = "Chế độ: Thủ Công";
+                modeLabel.innerText = "Chế độ Thủ Công (Click để bật/tắt)";
+                pumpState = !pumpState; // Đảo trạng thái khi chuyển sang thủ công
+            } else {
+                btn.className = "flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold py-2.5 rounded-xl transition";
+                btn.innerText = "Chế độ: Tự Động";
+                modeLabel.innerText = "Chế độ Tự động";
+            }
+        }
+
+        // --- 5. Tính năng Xuất file Báo cáo Excel (CSV) ---
+        function exportCSV() {
+            if (historyDataStore.length === 0) {
+                alert("Chưa có dữ liệu để xuất!");
+                return;
+            }
+            let csvContent = "\uFEFFThời gian,Độ pH,Điện áp (V),Trạng thái Bơm\n";
+            historyDataStore.forEach(row => {
+                csvContent += `"${row.time}","${row.ph}","${row.voltage}","${row.pump}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Bao_Cao_pH_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
